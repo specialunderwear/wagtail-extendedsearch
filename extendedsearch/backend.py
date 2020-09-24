@@ -5,7 +5,6 @@ from unittest import mock
 
 from django.db.models.query import QuerySet
 from django.utils.functional import cached_property
-from django.conf import settings
 from wagtail.search.backends.elasticsearch6 import (
     Elasticsearch6SearchBackend,
     Elasticsearch6SearchQueryCompiler,
@@ -19,6 +18,7 @@ from ocyan.core.utils import merge_dicts
 
 # from ocyan.core.fender import config
 
+from . import settings
 from .utils import get_facet_table, to_float
 from .errors import QueryTooLarge
 
@@ -36,7 +36,7 @@ SPIT_THAT_BITCH_RE = re.compile(r"(?P<field_name>[^\.]+)(?:\.(?P<addition>.*))?"
 
 def boosted_fields():
     boosts = {"upc": 2}  # default boosted fields
-    boosts.update(settings.WAGTAILSEARCHEXTENSION_BOOSTED_FIELDS)
+    boosts.update(settings.BOOSTED_FIELDS)
     return boosts
 
 
@@ -111,7 +111,7 @@ class SearchResults(Elasticsearch6SearchResults):
             return {
                 "terms": {
                     "field": full_column_name,
-                    "size": settings.WAGTAILSEARCHEXTENSION_FACET_BUCKET_SIZE,
+                    "size": settings.FACET_BUCKET_SIZE,
                     "order": facet.get("order", {"_key": "asc"}),
                 }
             }
@@ -296,7 +296,7 @@ class SearchResults(Elasticsearch6SearchResults):
             "body": body,
             "_source": False,
             "from_": self.start,
-            "size": limit or settings.WAGTAILSEARCHEXTENSION_PAGE_SIZE,
+            "size": limit or settings.PAGE_SIZE,
         }
 
         if body.get("query"):
@@ -392,10 +392,7 @@ class SearchQueryCompiler(Elasticsearch6SearchQueryCompiler):
             yield reverse, field
 
     def _compile_plaintext_query(self, query, fields, boost=1.0):
-        match_query = {
-            "query": query.query_string,
-            "type": settings.WAGTAILSEARCHEXTENSION_MULTIMATCH_TYPE,
-        }
+        match_query = {"query": query.query_string, "type": settings.MULTIMATCH_TYPE}
 
         if query.operator != "or":
             match_query["operator"] = query.operator
@@ -591,10 +588,9 @@ class SearchBackend(Elasticsearch6SearchBackend):
 
     def __init__(self, params):
         super().__init__(params)
-        if hasattr(settings, "ELASTICSEARCH_EXTRA_SETTINGS"):
-            self.settings = merge_dicts(
-                self.settings, settings.ELASTICSEARCH_EXTRA_SETTINGS, overwrite=True
-            )
+        self.settings = merge_dicts(
+            self.settings, settings.ELASTICSEARCH_EXTRA_SETTINGS, overwrite=True
+        )
 
     def search_suggestions(self, query, model_or_queryset, fields, **filters):
         "Suggest some search queries, based on the query passed"
@@ -610,7 +606,5 @@ class SearchBackend(Elasticsearch6SearchBackend):
         # Check the query
         search_query.check()
 
-        result = self.results_class(self, search_query)[
-            0 : settings.WAGTAILSEARCHEXTENSION_NUM_SUGGESTIONS
-        ]
+        result = self.results_class(self, search_query)[0 : settings.NUM_SUGGESTIONS]
         return result.autocomplete(fields, **filters)
