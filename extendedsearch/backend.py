@@ -28,11 +28,6 @@ logger = logging.getLogger()
 ORDERING_RE = re.compile(r"(?P<sign>[\-\+]?)(?P<order_by>(.*))")
 SPIT_THAT_BITCH_RE = re.compile(r"(?P<field_name>[^\.]+)(?:\.(?P<addition>.*))?")
 
-# FACET_BUCKET_SIZE = config.get("oscar_elasticsearch", "facet_bucket_size", 10)
-# NUM_SUGGESTIONS = config.get("oscar", "dashboard_items_per_page", 20)
-# PAGE_SIZE = config.get("oscar_elasticsearch", "query_page_size", 100)
-# MULTIMATCH_TYPE = config.get("oscar_elasticsearch", "multimatch_type", "most_fields")
-
 
 def boosted_fields():
     boosts = {"upc": 2}  # default boosted fields
@@ -89,7 +84,9 @@ class SearchMapping(Elasticsearch6Mapping):
             field_name = self.get_autocomplete_column_name(field)
             field_mapping = {"type": "completion"}
             if hasattr(self.model, "get_autocomplete_contexts"):
-                field_mapping["contexts"] = self.model.get_autocomplete_contexts()
+                contexts = self.model.get_autocomplete_contexts()
+                if contexts:
+                    field_mapping["contexts"] = contexts
 
             field_mapping.update(field.kwargs.get("es_extra", {}))
             properties[field_name] = field_mapping
