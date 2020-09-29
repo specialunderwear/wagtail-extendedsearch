@@ -10,7 +10,16 @@ autocomplete.
 Configuration
 -------------
 
-The facets can be configured using the WAGTAILSEARCHEXTENSION_FACETS setting.
+``NUM_SUGGESTIONS``: Number of suggestions to offer
+``BOOSTED_FIELDS``: Fields to be boosted
+``FACET_BUCKET_SIZE``: How many items to allow in a bucket
+``PAGE_SIZE``: How many items to retrieve from elasticsearc in one go.
+``MULTIMATCH_TYPE``: How should the score be calculated in a multimatch query
+
+Facet types
++++++++++++
+
+Facets can be configured using the get_facets classmethod.
 This is a list of dictionaries that must look like this::
     [
         {
@@ -19,9 +28,6 @@ This is a list of dictionaries that must look like this::
           "type": "term",
         }
     ]
-
-Facet types
-+++++++++++
 
 Currently 2 facet types are supported
 1. ``term``, facets are treated as keywords and counted and matched as such.

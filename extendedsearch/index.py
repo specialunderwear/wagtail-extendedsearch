@@ -11,3 +11,7 @@ class Indexed(index.Indexed):
                 "path": "search_productproxy__status_filter",
             }
         ]
+
+    @classmethod
+    def get_facets(cls):
+        return []

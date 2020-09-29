@@ -343,7 +343,7 @@ class SearchQueryCompiler(Elasticsearch6SearchQueryCompiler):
     ):
         self.es_filters = es_filters or {}
         self.es_ordering = es_ordering or []
-        self.facet_table = get_facet_table()
+        self.facet_table = get_facet_table(queryset.model.get_facets())
 
         super().__init__(
             queryset,
