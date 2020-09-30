@@ -14,9 +14,7 @@ from wagtail.search.backends.elasticsearch6 import (
 from wagtail.search.query import PlainText
 from wagtail.search.backends.base import FilterFieldError, OrderByFieldError
 
-from ocyan.core.utils import merge_dicts
-
-# from ocyan.core.fender import config
+from .utils import merge_dicts
 
 from . import settings
 from .utils import get_facet_table, to_float
