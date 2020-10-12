@@ -7,6 +7,15 @@ This plugin adds search capabilities through elasticsearch.
 Elasticsearch provides scored search results, facetting, suggestions and
 autocomplete.
 
+Features
+--------
+
+- filter on fields that are not in the database
+- order on fields that are not in the database
+- search suggestions when no results are found
+
+This readme is far from done and complete, take care.
+
 Configuration
 -------------
 
