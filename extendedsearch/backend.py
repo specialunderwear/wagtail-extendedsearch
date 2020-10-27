@@ -474,7 +474,10 @@ class SearchQueryCompiler(Elasticsearch6SearchQueryCompiler):
                 field = self._get_filterable_field(facet_name)
                 if field is not None:
                     column_name = self.mapping.get_field_column_name(field)
-                    es_filters.append({"match": {column_name: values}})
+                    if isinstance(values, list):
+                        es_filters.append({"terms": {column_name: values}})
+                    else:
+                        es_filters.append({"match": {column_name: values}})
 
                 continue
 
