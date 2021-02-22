@@ -24,7 +24,7 @@ from .errors import QueryTooLarge
 logger = logging.getLogger()
 
 ORDERING_RE = re.compile(r"(?P<sign>[\-\+]?)(?P<order_by>(.*))")
-SPIT_THAT_BITCH_RE = re.compile(r"(?P<field_name>[^\.]+)(?:\.(?P<addition>.*))?")
+FIELD_NAME_REGEX = re.compile(r"(?P<field_name>[^\.]+)(?:\.(?P<addition>.*))?")
 
 
 def boosted_fields():
@@ -140,7 +140,7 @@ class SearchResults(Elasticsearch6SearchResults):
         "Fetches facets from ES based on the fieldnames passed"
         aggregations = {}
         for field_path in field_names:
-            field_match = SPIT_THAT_BITCH_RE.match(field_path)
+            field_match = FIELD_NAME_REGEX.match(field_path)
             if field_match is not None:
                 field_name = field_match.group("field_name")
 
@@ -174,7 +174,10 @@ class SearchResults(Elasticsearch6SearchResults):
             unfiltered_body["aggregations"] = aggregations
 
             filtered_index = unfiltered_index
-            filtered_body = {"query": self.query_compiler.get_query(), "size": 0}
+            filtered_body = {
+                "query": self.query_compiler.get_query(),
+                "size": 0,
+            }
             filtered_body["aggregations"] = aggregations
 
             multi_request = [
@@ -332,6 +335,7 @@ class SearchQueryCompiler(Elasticsearch6SearchQueryCompiler):
         self,
         queryset,
         query,
+        base_es_filters=None,
         es_filters=None,
         es_ordering=None,
         fields=None,
@@ -339,8 +343,10 @@ class SearchQueryCompiler(Elasticsearch6SearchQueryCompiler):
         order_by_relevance=True,
         partial_match=True,
     ):
+        self.base_es_filters = base_es_filters or {}
         self.es_filters = es_filters or {}
         self.es_ordering = es_ordering or []
+
         if hasattr(queryset.model, "get_facets"):
             self.facet_table = get_facet_table(queryset.model.get_facets())
         else:
@@ -405,16 +411,20 @@ class SearchQueryCompiler(Elasticsearch6SearchQueryCompiler):
             return {"multi_match": match_query}
 
     def clone(self, es_filters=None, es_ordering=None):
-        es_filters_new = deepcopy(self.es_filters)
-        if es_filters is not None:
-            es_filters_new.update(es_filters)
+        base_es_filters = deepcopy(self.base_es_filters)
+
+        if es_filters is None:
+            es_filters = deepcopy(self.es_filters)
+        else:
+            base_es_filters.update(deepcopy(self.es_filters))
 
         ordering = es_ordering if es_ordering is not None else self.es_ordering
 
         return self.__class__(
             self.queryset,
             self.query,
-            es_filters=es_filters_new,
+            base_es_filters=base_es_filters,
+            es_filters=es_filters,
             es_ordering=ordering,
             fields=self.fields,
             order_by_relevance=not bool(ordering) and self.order_by_relevance,
@@ -453,7 +463,7 @@ class SearchQueryCompiler(Elasticsearch6SearchQueryCompiler):
         return self._filterable_field_lookup.get(field_attname)
 
     def get_field_name_for_path(self, path):
-        field_match = SPIT_THAT_BITCH_RE.match(path)
+        field_match = FIELD_NAME_REGEX.match(path)
         if field_match is not None:
             field_name = field_match.group("field_name")
             addition = field_match.group("addition")
@@ -465,63 +475,71 @@ class SearchQueryCompiler(Elasticsearch6SearchQueryCompiler):
 
             return column_name
 
-    def get_es_filters(self):
-        es_filters = []
-        for facet_name, values in self.es_filters.items():
-            facet = self.get_facet(facet_name)
-            if facet is None:
-                # try to find a matching filterfield
-                field = self._get_filterable_field(facet_name)
-                if field is not None:
-                    column_name = self.mapping.get_field_column_name(field)
-                    if isinstance(values, list):
-                        es_filters.append({"terms": {column_name: values}})
-                    else:
-                        es_filters.append({"match": {column_name: values}})
-
-                continue
-
-            facet_type = facet["type"]
-
-            if facet_type == self.FACET_TYPE_RANGE:
-
-                range_query = []
-
-                for value in values:
-                    start_pattern, end_pattern = value.split("-", maxsplit=1)
-                    start = to_float(start_pattern)
-                    end = to_float(end_pattern)
-
-                    range_restriction = dict()
-
-                    if start:
-                        range_restriction["gte"] = start
-                    if end:
-                        range_restriction["lt"] = end
-
-                    range_query.append(
-                        {
-                            "range": {
-                                self.get_field_name_for_path(
-                                    facet_name
-                                ): range_restriction
-                            }
-                        }
-                    )
-                es_filters.append({"bool": {"should": range_query}})
-
-            elif facet_type == self.FACET_TYPE_TERM:
-                if len(values) > 1:
-                    es_filters.append(
-                        {"terms": {self.get_field_name_for_path(facet_name): values}}
-                    )
+    def format_es_filter(self, facet_name, value_s):
+        facet = self.get_facet(facet_name)
+        if facet is None:
+            # try to find a matching filterfield
+            field = self._get_filterable_field(facet_name)
+            if field is not None:
+                column_name = self.mapping.get_field_column_name(field)
+                if isinstance(value_s, list):
+                    return {"terms": {column_name: value_s}}
                 else:
-                    value = values[0]
-                    es_filters.append(
-                        {"match": {self.get_field_name_for_path(facet_name): value}}
-                    )
+                    return {"match": {column_name: value_s}}
+
+            # no field could be found for this facet_name
+            return None
+
+        facet_type = facet["type"]
+
+        if facet_type == self.FACET_TYPE_RANGE:
+
+            range_query = []
+
+            for value in value_s:
+                start_pattern, end_pattern = value.split("-", maxsplit=1)
+                start = to_float(start_pattern)
+                end = to_float(end_pattern)
+
+                range_restriction = dict()
+
+                if start:
+                    range_restriction["gte"] = start
+                if end:
+                    range_restriction["lt"] = end
+
+                range_query.append(
+                    {
+                        "range": {
+                            self.get_field_name_for_path(facet_name): range_restriction
+                        }
+                    }
+                )
+            return {"bool": {"should": range_query}}
+
+        elif facet_type == self.FACET_TYPE_TERM:
+            if len(value_s) > 1:
+                return {"terms": {self.get_field_name_for_path(facet_name): value_s}}
+            else:
+                value = value_s[0]
+                return {"match": {self.get_field_name_for_path(facet_name): value}}
+
+        logger.warning("Unkown facet_type %s with value: %s", facet_type, value_s)
+        return None
+
+    def format_es_filters(self, **filter_spec):
+        es_filters = []
+        for facet_name, values in filter_spec.items():
+            es_filter = self.format_es_filter(facet_name, values)
+            if es_filter is not None:
+                es_filters.append(es_filter)
 
         return es_filters
+
+    def get_es_filters(self):
+        return self.format_es_filters(**self.base_es_filters) + self.format_es_filters(
+            **self.es_filters
+        )
 
     def get_es_ordering(self):
         result = []
@@ -560,16 +578,27 @@ class SearchQueryCompiler(Elasticsearch6SearchQueryCompiler):
 
         return query
 
-    def get_unfiltered_query(self):
+    def format_query(self, filters):
         inner_query = self.get_inner_query()
-        filters = super().get_filters()
-
         if len(filters) == 1:
             return {"bool": {"must": inner_query, "filter": filters[0]}}
         elif len(filters) > 1:
             return {"bool": {"must": inner_query, "filter": filters}}
         else:
             return inner_query
+
+    def get_query(self):
+        full_filters = self.get_filters()
+        return self.format_query(full_filters)
+
+    def get_unfiltered_query(self):
+        # the unfiltered query should not add any es_filters, therefor the
+        # super().get_filters() will be called, however, the base_es_filters
+        # SHOULD be added, so they are formatted separately.
+        base_filters = super().get_filters() + self.format_es_filters(
+            **self.base_es_filters
+        )
+        return self.format_query(base_filters)
 
     def get_filters(self):
         return self.get_es_filters() + super().get_filters()
