@@ -1,7 +1,16 @@
+"""
+wagtail-extendedsearch add the following functionality to the default wagtail
+search backend:
+
+1. filtering on non model field values.
+2. ordering on non model field values
+3. Autocomplete via elasticsearch suggest api
+4. Suggestions via elasticsearch suggest api
+"""
 from setuptools import setup, find_packages
 
 
-__version__ = "1.0.4"
+__version__ = "1.0.5"
 
 
 setup(
@@ -10,7 +19,7 @@ setup(
     # extract version from module.
     version=__version__,
     description="Add some more functionality to the wagtail elasticsearch search backend",
-    long_description="...",
+    long_description=__doc__,
     classifiers=[],
     keywords="",
     author="Lars van de Kerkhof",
