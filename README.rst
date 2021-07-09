@@ -19,17 +19,19 @@ This readme is far from done and complete, take care.
 Configuration
 -------------
 
-``NUM_SUGGESTIONS``: Number of suggestions to offer
-``BOOSTED_FIELDS``: Fields to be boosted
-``FACET_BUCKET_SIZE``: How many items to allow in a bucket
-``PAGE_SIZE``: How many items to retrieve from elasticsearc in one go.
-``MULTIMATCH_TYPE``: How should the score be calculated in a multimatch query
+- ``WAGTAILSEARCHEXTENSION_NUM_SUGGESTIONS``: Number of suggestions to offer
+- ``WAGTAILSEARCHEXTENSION_BOOSTED_FIELDS``: Fields to be boosted
+- ``WAGTAILSEARCHEXTENSION_FACET_BUCKET_SIZE``: How many items to allow in a bucket
+- ``WAGTAILSEARCHEXTENSION_PAGE_SIZE``: How many items to retrieve from elasticsearc in one go.
+- ``WAGTAILSEARCHEXTENSION_MULTIMATCH_TYPE``: How should the score be calculated in a multimatch query
+- ``WAGTAILSEARCHEXTENSION_DEFAULT_OPERATOR``: Should all the search terms be present or just one of the search terms? (default=or) change to and if all the search terms should be present.
 
 Facet types
 +++++++++++
 
 Facets can be configured using the get_facets classmethod.
 This is a list of dictionaries that must look like this::
+
     [
         {
           "label": "Brand",
@@ -80,26 +82,25 @@ Tweaking the mapping
 --------------------
 You can override/extend the elasticsearch settings by using the ELASTICSEARCH_EXTRA_SETTINGS setting
 
-For example:
-``
-WAGTAILSEARCHEXTENSION_ELASTICSEARCH_EXTRA_SETTINGS = {
-    'settings': {
-        'analysis': {
-            'analyzer': {
-                'custom_analyzer': {
-                  'type': 'custom',
-                  'tokenizer': 'custom_tokenizer',
-                  'filter': ['asciifolding', 'ngram']
-                }
-            },
-            'tokenizer': {
-                'custom_tokenizer': {
-                    'type': 'nGram',
-                    'min_gram': 3,
-                    'max_gram': 15
+For example::
+
+    WAGTAILSEARCHEXTENSION_ELASTICSEARCH_EXTRA_SETTINGS = {
+        'settings': {
+            'analysis': {
+                'analyzer': {
+                    'custom_analyzer': {
+                      'type': 'custom',
+                      'tokenizer': 'custom_tokenizer',
+                      'filter': ['asciifolding', 'ngram']
+                    }
+                },
+                'tokenizer': {
+                    'custom_tokenizer': {
+                        'type': 'nGram',
+                        'min_gram': 3,
+                        'max_gram': 15
+                    }
                 }
             }
         }
     }
-}
-``
