@@ -174,10 +174,7 @@ class SearchResults(Elasticsearch6SearchResults):
             unfiltered_body["aggregations"] = aggregations
 
             filtered_index = unfiltered_index
-            filtered_body = {
-                "query": self.query_compiler.get_query(),
-                "size": 0,
-            }
+            filtered_body = {"query": self.query_compiler.get_query(), "size": 0}
             filtered_body["aggregations"] = aggregations
 
             multi_request = [
@@ -329,6 +326,7 @@ class SearchResults(Elasticsearch6SearchResults):
 class SearchQueryCompiler(Elasticsearch6SearchQueryCompiler):
     FACET_TYPE_TERM = "term"
     FACET_TYPE_RANGE = "range"
+    DEFAULT_OPERATOR = settings.DEFAULT_OPERATOR
     mapping_class = SearchMapping
 
     def __init__(
