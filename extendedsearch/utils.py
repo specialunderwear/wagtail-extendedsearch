@@ -66,6 +66,15 @@ def merge_dicts(
     >>> merge_dicts(first, second, deduplicate_iterables=True)
     {'a': 1, 'b': [1]}
 
+    >>> first = {'a': ["klaas", "piet"], 'b': [3, 1]}
+    >>> second = {'a': "piet", 'b': 1}
+    >>> merge_dicts(first, second, multivalue=True, deduplicate_iterables=True)
+    {'a': ['klaas', 'piet'], 'b': [3, 1]}
+
+    >>> first = {'a': ["klaas", "piet"], 'b': [3, 1]}
+    >>> second = {'a': "piet", 'b': 1}
+    >>> merge_dicts(first, second, multivalue=True, deduplicate_iterables=False)
+    {'a': ['klaas', 'piet', 'piet'], 'b': [3, 1, 1]}
     """
     for key, value in updates.items():
         if key in target:
@@ -79,13 +88,20 @@ def merge_dicts(
                     raise Exception("can not merge nub")
             elif isinstance(item, list):
                 if isinstance(value, str):
-                    item.append(value)
+                    if deduplicate_iterables and value in item:
+                        continue
+                    else:
+                        item.append(value)
                 elif isinstance(value, Iterable):
                     item = item + list(value)
                     if deduplicate_iterables:
                         item = list(unique_everseen(item))
                 else:
-                    item.append(value)
+                    if deduplicate_iterables and value in item:
+                        continue
+                    else:
+                        item.append(value)
+
                 target[key] = item
             elif multivalue and value != item:  # gather multiple values into list
                 target[key] = [item, value]

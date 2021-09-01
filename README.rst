@@ -42,9 +42,7 @@ This is a list of dictionaries that must look like this::
 
 Currently 2 facet types are supported
 1. ``term``, facets are treated as keywords and counted and matched as such.
-2. ``range``, facets are treated as integer ranges, the ``ranges`` parameter
-   must de defined for type range. It can be used to segment the range, eg.
-   ``[10, 100, 100]`` will yield 4 filters ranges, 0-9, 10-99, 100-999 and 1000+
+2. ``range``, facets are treated as integer ranges, the ``ranges`` parameter must de defined for type range. It can be used to segment the range, eg. ``[10, 100, 100]`` will yield 4 filters ranges, 0-9, 10-99, 100-999 and 1000+
 
 Facet ordering
 ++++++++++++++
