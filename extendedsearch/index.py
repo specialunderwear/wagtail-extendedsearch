@@ -13,6 +13,10 @@ from wagtail.search.index import (
 
 class Indexed(index.Indexed):
     @classmethod
+    def document_insert_hook(cls, obj, doc):
+        return doc
+
+    @classmethod
     def get_autocomplete_contexts(cls):
         return []
 

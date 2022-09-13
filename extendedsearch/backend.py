@@ -73,6 +73,9 @@ class SearchMapping(Elasticsearch6Mapping):
             field_name = self.get_autocomplete_column_name(field)
             doc[field_name] = field.get_value(obj)
 
+        if hasattr(self.model, "document_insert_hook"):
+            return self.model.document_insert_hook(obj, doc)
+
         return doc
 
     def get_mapping(self):
