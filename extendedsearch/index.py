@@ -13,7 +13,7 @@ from wagtail.search.index import (
 
 class Indexed(index.Indexed):
     @classmethod
-    def document_insert_hook(cls, doc):
+    def document_insert_hook(cls, obj, doc):
         return doc
 
     @classmethod

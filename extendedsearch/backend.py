@@ -74,7 +74,7 @@ class SearchMapping(Elasticsearch6Mapping):
             doc[field_name] = field.get_value(obj)
 
         if hasattr(self.model, "document_insert_hook"):
-            return self.model.document_insert_hook(doc)
+            return self.model.document_insert_hook(obj, doc)
 
         return doc
 
